@@ -549,7 +549,6 @@ folderId: "17bsx3QlL_SnmA7VLyKtHzP1tfT156ZVZ",
 
 <script>
 const PLAYLISTS = [
-  { id: 'full',      name: 'Full songs', color: '#8b5cf6', letter: 'F'  },
   { id: 'soprano',   name: 'Soprano',    color: '#ef4a7b', letter: 'S'  },
   { id: 'alto1',     name: 'Alto 1',     color: '#f59e0b', letter: 'A1' },
   { id: 'alto2',     name: 'Alto 2',     color: '#10b981', letter: 'A2' },
@@ -612,7 +611,6 @@ function classifyTrack(filename) {
   const base = filename.replace(/\.[a-z0-9]+$/i, '');
   const norm = ' ' + base.replace(/[_\-.\(\)]+/g, ' ').replace(/\s+/g, ' ').toLowerCase() + ' ';
   const playlists = [];
-  if (/\ball\b/.test(norm)) playlists.push('full');
   if (/\balto\s*(1|i|one)\b/.test(norm) || /\ba\s*1\b/.test(norm) || /\ba1\b/.test(norm)) playlists.push('alto1');
   if (/\balto\s*(2|ii|two)\b/.test(norm) || /\ba\s*2\b/.test(norm) || /\ba2\b/.test(norm)) playlists.push('alto2');
   if (/\bsoprano(s)?\b/.test(norm) || /\bsop\b/.test(norm)) playlists.push('soprano');
