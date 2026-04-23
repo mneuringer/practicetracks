@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Practice Tracks</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --bg-elev: #161821;
+    --bg-elev-2: #1e2230;
+    --border: #262a38;
+    --text: #e8eaf2;
+    --text-dim: #9aa0b4;
+    --text-faint: #6b7085;
+    --accent: #7c5cff;
+    --accent-2: #9f85ff;
+    --green: #5eead4;
+    --danger: #ff6b7a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    background: radial-gradient(1200px 800px at 80% -10%, #1a1b2a 0%, var(--bg) 50%) fixed;
+    color: var(--text);
+    overflow: hidden;
+  }
+  button, input, select { font-family: inherit; }
+
+  /* ---------- Landing (Sign in) ---------- */
+  .landing {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; padding: 20px; text-align: center;
+  }
+  .landing.hidden { display: none; }
+  .logo-big {
+    width: 72px; height: 72px; border-radius: 18px;
+    background: linear-gradient(135deg, var(--accent), #4fc3f7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; font-weight: 700;
+    margin-bottom: 22px;
+    box-shadow: 0 20px 40px -15px rgba(124,92,255,0.5);
+  }
+  .landing h1 {
+    font-size: 36px; font-weight: 700; letter-spacing: -0.02em;
+    margin: 0 0 8px;
+  }
+  .landing .sub {
+    color: var(--text-dim); margin: 0 0 32px; font-size: 15px; max-width: 420px;
+  }
+  .signin-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: white; color: #1f1f1f;
+    border: none; padding: 13px 24px; border-radius: 10px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: transform .1s, box-shadow .15s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .signin-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+  .signin-btn:active { transform: translateY(0); }
+  .signin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .signin-btn svg { width: 18px; height: 18px; }
+
+  .landing .foot {
+    margin-top: 20px; color: var(--text-faint); font-size: 12px; max-width: 400px;
+  }
+  .landing .error { color: var(--danger); font-size: 13px; margin-top: 14px; min-height: 16px; }
+
+  /* ---------- Player layout ---------- */
+  .app { display: none; grid-template-columns: 260px 1fr; grid-template-rows: 1fr auto; height: 100vh; }
+  .app.visible { display: grid; }
+
+  .sidebar {
+    grid-row: 1 / 2;
+    background: var(--bg-elev);
+    border-right: 1px solid var(--border);
+    padding: 22px 16px;
+    overflow-y: auto;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 8px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+  .brand-dot {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #4fc3f7);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .brand-name { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 11px; color: var(--text-faint); }
+
+  .nav-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-faint); padding: 10px 8px 6px;
+  }
+  .playlist-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-align: left;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .playlist-btn:hover { background: var(--bg-elev-2); }
+  .playlist-btn.active { background: var(--bg-elev-2); color: var(--accent-2); }
+  .playlist-btn .count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-faint);
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .playlist-btn .swatch {
+    width: 10px; height: 10px; border-radius: 3px;
+  }
+  .sidebar-footer {
+    margin-top: 20px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; flex-direction: column;
+  }
+  .ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .ghost:hover { border-color: var(--accent); }
+
+  .main {
+    grid-row: 1 / 2;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .main-header {
+    padding: 26px 32px 16px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 20px;
+  }
+  .playlist-title {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .playlist-cover {
+    width: 80px; height: 80px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; font-weight: 700;
+    color: white;
+    box-shadow: 0 12px 28px -8px rgba(0,0,0,0.5);
+  }
+  .playlist-title h1 {
+    margin: 0;
+    font-size: 30px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .playlist-meta {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .main-toolbar { display: flex; gap: 10px; align-items: center; }
+  .search {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 9px 14px;
+    color: var(--text);
+    font-size: 13px;
+    width: 220px;
+    outline: none;
+  }
+  .search:focus { border-color: var(--accent); }
+
+  .track-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+  }
+  .track-head, .track-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 160px 80px;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+  }
+  .track-head {
+    color: var(--text-faint);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    padding-bottom: 12px;
+    margin-bottom: 6px;
+    position: sticky; top: 0;
+    background: var(--bg);
+    z-index: 1;
+  }
+  .track-row {
+    cursor: pointer;
+    color: var(--text-dim);
+    transition: background .1s;
+  }
+  .track-row:hover { background: var(--bg-elev); color: var(--text); }
+  .track-row.playing { color: var(--accent-2); background: var(--bg-elev); }
+  .track-row .idx { color: var(--text-faint); font-size: 13px; text-align: right; }
+  .track-row .title {
+    font-weight: 500; color: var(--text); font-size: 14px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .track-row .sub {
+    font-size: 12px; color: var(--text-faint); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .track-row.playing .title { color: var(--accent-2); }
+  .track-row .size, .track-row .type { font-size: 13px; color: var(--text-dim); }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-faint);
+  }
+  .empty strong { color: var(--text-dim); display: block; margin-bottom: 6px; }
+
+  /* ---------- Player bar ---------- */
+  .player {
+    grid-column: 1 / 3;
+    grid-row: 2 / 3;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+    padding: 14px 24px;
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    align-items: center;
+    gap: 20px;
+  }
+  .now-playing { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .np-cover {
+    width: 48px; height: 48px; border-radius: 6px;
+    background: var(--bg-elev-2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .np-info { min-width: 0; }
+  .np-title {
+    font-size: 13px; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .np-sub {
+    font-size: 11px; color: var(--text-faint); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .controls { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .control-row { display: flex; align-items: center; gap: 14px; }
+  .ctrl-btn {
+    background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; padding: 6px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: color .1s;
+  }
+  .ctrl-btn:hover { color: var(--text); }
+  .ctrl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .ctrl-btn.play {
+    background: white; color: var(--bg);
+    width: 36px; height: 36px;
+  }
+  .ctrl-btn.play:hover { transform: scale(1.05); color: var(--bg); }
+
+  .progress-row {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; max-width: 540px;
+    font-size: 11px; color: var(--text-faint);
+  }
+  .progress {
+    flex: 1; height: 4px;
+    background: var(--bg-elev-2);
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--text);
+    width: 0%;
+    transition: width .1s linear;
+  }
+  .progress:hover .progress-fill { background: var(--accent-2); }
+
+  .volume-row { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+  .volume {
+    width: 100px; height: 4px;
+    background: var(--bg-elev-2); border-radius: 2px;
+    cursor: pointer; position: relative; overflow: hidden;
+  }
+  .volume-fill { height: 100%; background: var(--text); width: 70%; }
+
+  /* ---------- Loading ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,11,15,0.85);
+    backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .overlay.visible { display: flex; }
+  .spinner {
+    width: 42px; height: 42px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .overlay-text { margin-left: 16px; color: var(--text-dim); font-size: 14px; }
+
+  .toast {
+    position: fixed; bottom: 110px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    opacity: 0; pointer-events: none;
+    transition: all .25s;
+    z-index: 200;
+  }
+  .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .config-missing {
+    max-width: 520px;
+    background: var(--bg-elev);
+    border: 1px solid var(--danger);
+    border-radius: 14px;
+    padding: 22px;
+    margin-top: 20px;
+    text-align: left;
+  }
+  .config-missing h3 { margin: 0 0 10px; color: var(--danger); font-size: 14px; }
+  .config-missing code {
+    display: block;
+    background: var(--bg-elev-2);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin: 10px 0;
+    white-space: pre;
+  }
+</style>
+</head>
+<body>
+
+<!--
+================================================================================
+  CONFIGURE THIS — three values to paste in, then save + deploy.
+================================================================================
+-->
+<script>
+const CONFIG = {
+  // From Google Cloud Console → APIs & Services → Credentials → API Keys
+  apiKey:   "AIzaSyBoimR4thrd0x-lsZXxe7LB9AkyiusUL08",
+
+  // From Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs
+  clientId: "1088359846353-i6ghlc9s269s3m8c2jbrmndb1vn892vo.apps.googleusercontent.com",
+
+  // The part of your Drive folder URL after /folders/
+  // e.g. https://drive.google.com/drive/folders/ABC123xyz  →  "ABC123xyz"
+  folderId: "17bsx3QlL_SnmA7VLyKtHzP1tfT156ZVZ",
+};
+</script>
+
+<!-- ========== LANDING (Sign in) ========== -->
+<div id="landing" class="landing">
+  <div class="logo-big">♪</div>
+  <h1>Practice Tracks</h1>
+  <p class="sub">Auto-organized choral playlists from our shared Google Drive folder.</p>
+  <button id="signInBtn" class="signin-btn">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fbbc05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Sign in with Google
+  </button>
+  <div id="signinError" class="error"></div>
+  <p class="foot">Only emails invited by the folder owner can sign in.</p>
+
+  <!-- Shown when CONFIG is not filled in -->
+  <div id="configMissing" class="config-missing" style="display:none;">
+    <h3>⚠ This file isn't configured yet</h3>
+    <p style="margin:0;color:var(--text-dim);font-size:13px;">Open this file in a text editor and replace the three <code style="display:inline;padding:1px 5px;">PASTE_…</code> values near the top with your Google Cloud credentials.</p>
+  </div>
+</div>
+
+<!-- ========== PLAYER APP ========== -->
+<div id="app" class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-dot">♪</div>
+      <div>
+        <div class="brand-name">Practice Tracks</div>
+        <div class="brand-sub" id="brandUser">Connected</div>
+      </div>
+    </div>
+    <div class="nav-label">Playlists</div>
+    <div id="playlistList"></div>
+    <div class="sidebar-footer">
+      <button id="refreshBtn" class="ghost">Refresh from Drive</button>
+      <button id="signOutBtn" class="ghost">Sign out</button>
+    </div>
+  </aside>
+
+  <section class="main">
+    <header class="main-header">
+      <div class="playlist-title">
+        <div id="playlistCover" class="playlist-cover">S</div>
+        <div>
+          <h1 id="playlistName">Soprano</h1>
+          <div class="playlist-meta" id="playlistMeta">0 tracks</div>
+        </div>
+      </div>
+      <div class="main-toolbar">
+        <input id="searchInput" class="search" placeholder="Search tracks…" />
+      </div>
+    </header>
+    <div class="track-list" id="trackList">
+      <div class="track-head">
+        <div style="text-align:right;">#</div>
+        <div>Title</div>
+        <div>Type</div>
+        <div style="text-align:right;">Size</div>
+      </div>
+      <div id="tracksContainer"></div>
+    </div>
+  </section>
+
+  <!-- Player bar -->
+  <div class="player">
+    <div class="now-playing">
+      <div class="np-cover" id="npCover">♪</div>
+      <div class="np-info">
+        <div class="np-title" id="npTitle">Select a track to play</div>
+        <div class="np-sub" id="npSub">—</div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="control-row">
+        <button class="ctrl-btn" id="prevBtn" title="Previous" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button class="ctrl-btn play" id="playBtn" title="Play" disabled>
+          <svg id="playIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="ctrl-btn" id="nextBtn" title="Next" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6z"/></svg>
+        </button>
+      </div>
+      <div class="progress-row">
+        <span id="timeCur">0:00</span>
+        <div class="progress" id="progress"><div class="progress-fill" id="progressFill"></div></div>
+        <span id="timeDur">0:00</span>
+      </div>
+    </div>
+    <div class="volume-row">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-dim)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.72 2.5-2.23 2.5-4.02z"/></svg>
+      <div class="volume" id="volume"><div class="volume-fill" id="volumeFill"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay">
+  <div class="spinner"></div>
+  <div class="overlay-text" id="overlayText">Loading…</div>
+</div>
+<div id="toast" class="toast"></div>
+
+<audio id="audio" preload="none"></audio>
+
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ============================================================
+// State
+// ============================================================
+const PLAYLISTS = [
+  { id: 'soprano',   name: 'Soprano',    color: '#ef4a7b', letter: 'S'  },
+  { id: 'alto1',     name: 'Alto 1',     color: '#f59e0b', letter: 'A1' },
+  { id: 'alto2',     name: 'Alto 2',     color: '#10b981', letter: 'A2' },
+  { id: 'tenorbass', name: 'Tenor/Bass', color: '#3b82f6', letter: 'TB' },
+];
+
+let tokenClient = null;
+let accessToken = null;
+let gapiReady = false;
+let gisReady = false;
+
+let allTracks = [];
+let currentPlaylistId = 'soprano';
+let currentQueue = [];
+let currentIndex = -1;
+let currentBlobUrl = null;
+let isPlaying = false;
+
+const audio = document.getElementById('audio');
+
+// ============================================================
+// CONFIG validation
+// ============================================================
+function isConfigured() {
+  return CONFIG.apiKey && !CONFIG.apiKey.startsWith('PASTE_')
+      && CONFIG.clientId && !CONFIG.clientId.startsWith('PASTE_')
+      && CONFIG.folderId && !CONFIG.folderId.startsWith('PASTE_');
+}
+
+if (!isConfigured()) {
+  document.getElementById('configMissing').style.display = 'block';
+  document.getElementById('signInBtn').disabled = true;
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function fmtSize(bytes) {
+  if (!bytes && bytes !== 0) return '—';
+  bytes = Number(bytes);
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function fmtTime(sec) {
+  if (!isFinite(sec) || sec < 0) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+function mimeToType(mime, name) {
+  if (/wav/i.test(mime) || /\.wav$/i.test(name)) return 'WAV';
+  if (/mp3|mpeg/i.test(mime) || /\.mp3$/i.test(name)) return 'MP3';
+  if (/m4a|aac/i.test(mime) || /\.m4a$/i.test(name)) return 'M4A';
+  if (/ogg/i.test(mime) || /\.ogg$/i.test(name)) return 'OGG';
+  if (/flac/i.test(mime) || /\.flac$/i.test(name)) return 'FLAC';
+  return 'Audio';
+}
+function showError(msg) { document.getElementById('signinError').textContent = msg || ''; }
+function showOverlay(t) { document.getElementById('overlayText').textContent = t || 'Loading…'; document.getElementById('overlay').classList.add('visible'); }
+function hideOverlay() { document.getElementById('overlay').classList.remove('visible'); }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove('visible'), 2500);
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function shadeColor(hex, pct) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+  r = Math.max(0, Math.min(255, Math.round(r + (pct/100)*255)));
+  g = Math.max(0, Math.min(255, Math.round(g + (pct/100)*255)));
+  b = Math.max(0, Math.min(255, Math.round(b + (pct/100)*255)));
+  return '#' + ((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+}
+
+// ============================================================
+// Voice-part matching
+// ============================================================
+function classifyTrack(filename) {
+  const base = filename.replace(/\.[a-z0-9]+$/i, '');
+  const norm = ' ' + base.replace(/[_\-.\(\)]+/g, ' ').replace(/\s+/g, ' ').toLowerCase() + ' ';
+  const playlists = [];
+  if (/\balto\s*(1|i|one)\b/.test(norm) || /\ba\s*1\b/.test(norm) || /\ba1\b/.test(norm)) playlists.push('alto1');
+  if (/\balto\s*(2|ii|two)\b/.test(norm) || /\ba\s*2\b/.test(norm) || /\ba2\b/.test(norm)) playlists.push('alto2');
+  if (/\bsoprano(s)?\b/.test(norm) || /\bsop\b/.test(norm)) playlists.push('soprano');
+  if (/\btenor(s)?\b/.test(norm) ||
+      /\bbass(es)?\b/.test(norm) ||
+      /\bbari(tone)?\b/.test(norm) ||
+      /\bt\s*[\/\-]\s*b\b/.test(norm) ||
+      /\btb\b/.test(norm)) playlists.push('tenorbass');
+  return playlists;
+}
+
+// ============================================================
+// Google API init
+// ============================================================
+function initGapi() {
+  return new Promise((resolve, reject) => {
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({
+          apiKey: CONFIG.apiKey,
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+        });
+        gapiReady = true;
+        resolve();
+      } catch (e) { reject(e); }
+    });
+  });
+}
+function initGis() {
+  return new Promise((resolve) => {
+    const poll = () => {
+      if (window.google && google.accounts && google.accounts.oauth2) {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CONFIG.clientId,
+          scope: 'https://www.googleapis.com/auth/drive.readonly',
+          callback: (resp) => {
+            if (resp.error) {
+              showError('Sign-in error: ' + (resp.error_description || resp.error));
+              hideOverlay();
+              return;
+            }
+            accessToken = resp.access_token;
+            onSignedIn();
+          },
+        });
+        gisReady = true;
+        resolve();
+      } else {
+        setTimeout(poll, 100);
+      }
+    };
+    poll();
+  });
+}
+async function signIn() {
+  showError('');
+  if (!isConfigured()) { showError('This file is not configured.'); return; }
+  try {
+    showOverlay('Connecting to Google…');
+    if (!gapiReady) await initGapi();
+    if (!gisReady) await initGis();
+    tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+  } catch (e) {
+    hideOverlay();
+    showError('Init error: ' + (e.message || JSON.stringify(e)));
+  }
+}
+function signOut() {
+  if (accessToken) { try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch {} }
+  accessToken = null;
+  allTracks = [];
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('landing').classList.remove('hidden');
+}
+
+// ============================================================
+// Drive — list audio files (recursively from CONFIG.folderId)
+// ============================================================
+async function listAudioFilesInFolder(folderId) {
+  const results = [];
+  const folderQueue = [folderId];
+  while (folderQueue.length) {
+    const batch = folderQueue.splice(0, folderQueue.length);
+    for (const fid of batch) {
+      let pageToken = null;
+      do {
+        const resp = await gapi.client.drive.files.list({
+          q: `'${fid}' in parents and trashed = false`,
+          fields: 'nextPageToken, files(id, name, mimeType, size, parents)',
+          pageSize: 1000,
+          pageToken: pageToken || undefined,
+          supportsAllDrives: true,
+          includeItemsFromAllDrives: true,
+        });
+        const files = resp.result.files || [];
+        for (const f of files) {
+          if (f.mimeType === 'application/vnd.google-apps.folder') folderQueue.push(f.id);
+          else if (isAudioFile(f)) results.push(f);
+        }
+        pageToken = resp.result.nextPageToken;
+      } while (pageToken);
+    }
+  }
+  return results;
+}
+function isAudioFile(f) {
+  if (f.mimeType && f.mimeType.startsWith('audio/')) return true;
+  return /\.(mp3|wav|m4a|ogg|flac|aac)$/i.test(f.name);
+}
+
+// ============================================================
+// Main flow after sign-in
+// ============================================================
+async function onSignedIn() {
+  try {
+    showOverlay('Reading shared folder…');
+    const files = await listAudioFilesInFolder(CONFIG.folderId);
+    allTracks = files.map(f => ({
+      id: f.id,
+      name: f.name,
+      mimeType: f.mimeType || '',
+      size: f.size,
+      playlistIds: classifyTrack(f.name),
+    }));
+
+    document.getElementById('landing').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    renderSidebar();
+    selectPlaylist('soprano');
+    hideOverlay();
+
+    const unmatched = allTracks.filter(t => t.playlistIds.length === 0).length;
+    if (allTracks.length === 0) toast('No audio files found in that folder.');
+    else if (unmatched > 0) toast(`Loaded ${allTracks.length} tracks. ${unmatched} didn't match any voice part.`);
+    else toast(`Loaded ${allTracks.length} tracks.`);
+  } catch (e) {
+    console.error(e);
+    hideOverlay();
+    const msg = e.result?.error?.message || e.message || String(e);
+    showError('Error loading Drive: ' + msg);
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('landing').classList.remove('hidden');
+  }
+}
+
+// ============================================================
+// Sidebar + playlist rendering
+// ============================================================
+function renderSidebar() {
+  const container = document.getElementById('playlistList');
+  container.innerHTML = '';
+  for (const p of PLAYLISTS) {
+    const count = allTracks.filter(t => t.playlistIds.includes(p.id)).length;
+    const btn = document.createElement('button');
+    btn.className = 'playlist-btn' + (p.id === currentPlaylistId ? ' active' : '');
+    btn.innerHTML = `
+      <span class="swatch" style="background:${p.color}"></span>
+      <span>${p.name}</span>
+      <span class="count">${count}</span>
+    `;
+    btn.onclick = () => selectPlaylist(p.id);
+    container.appendChild(btn);
+  }
+}
+function selectPlaylist(id) {
+  currentPlaylistId = id;
+  const p = PLAYLISTS.find(x => x.id === id);
+  document.getElementById('playlistName').textContent = p.name;
+  document.getElementById('playlistCover').textContent = p.letter;
+  document.getElementById('playlistCover').style.background =
+    `linear-gradient(135deg, ${p.color}, ${shadeColor(p.color, -30)})`;
+  renderSidebar();
+  renderTracks();
+}
+function renderTracks() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const tracks = allTracks
+    .filter(t => t.playlistIds.includes(currentPlaylistId))
+    .filter(t => !q || t.name.toLowerCase().includes(q))
+    .sort((a,b) => a.name.localeCompare(b.name));
+  currentQueue = tracks;
+
+  document.getElementById('playlistMeta').textContent = `${tracks.length} track${tracks.length === 1 ? '' : 's'}`;
+  const c = document.getElementById('tracksContainer');
+  c.innerHTML = '';
+  if (tracks.length === 0) {
+    c.innerHTML = `<div class="empty"><strong>No tracks here yet</strong>Tracks whose filenames include "${PLAYLISTS.find(p=>p.id===currentPlaylistId).name}" will appear here.</div>`;
+    return;
+  }
+  tracks.forEach((t, i) => {
+    const displayName = t.name.replace(/\.[a-z0-9]+$/i, '');
+    const row = document.createElement('div');
+    row.className = 'track-row' + (currentIndex >= 0 && currentQueue[currentIndex]?.id === t.id ? ' playing' : '');
+    row.innerHTML = `
+      <div class="idx">${i+1}</div>
+      <div>
+        <div class="title">${escapeHtml(displayName)}</div>
+        <div class="sub">${t.playlistIds.map(pid => PLAYLISTS.find(p=>p.id===pid)?.name).filter(Boolean).join(' · ')}</div>
+      </div>
+      <div class="type">${mimeToType(t.mimeType, t.name)}</div>
+      <div class="size" style="text-align:right;">${fmtSize(t.size)}</div>
+    `;
+    row.onclick = () => playIndex(i);
+    c.appendChild(row);
+  });
+}
+
+// ============================================================
+// Playback
+// ============================================================
+async function playIndex(i) {
+  if (i < 0 || i >= currentQueue.length) return;
+  currentIndex = i;
+  const t = currentQueue[i];
+  document.getElementById('npTitle').textContent = t.name.replace(/\.[a-z0-9]+$/i, '');
+  document.getElementById('npSub').textContent =
+    PLAYLISTS.find(p=>p.id===currentPlaylistId).name + ' · ' + mimeToType(t.mimeType, t.name);
+  renderTracks();
+
+  try {
+    showOverlay('Loading track…');
+    if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${t.id}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + accessToken } }
+    );
+    if (!resp.ok) {
+      const body = await resp.text();
+      throw new Error('HTTP ' + resp.status + ' — ' + body.slice(0, 200));
+    }
+    const blob = await resp.blob();
+    currentBlobUrl = URL.createObjectURL(blob);
+    audio.src = currentBlobUrl;
+    await audio.play();
+    isPlaying = true;
+    updatePlayIcon();
+    hideOverlay();
+    updatePrevNext();
+  } catch (e) {
+    hideOverlay();
+    console.error(e);
+    toast('Could not play: ' + (e.message || e));
+  }
+}
+function togglePlay() {
+  if (currentIndex < 0 && currentQueue.length > 0) { playIndex(0); return; }
+  if (audio.paused) { audio.play(); isPlaying = true; }
+  else { audio.pause(); isPlaying = false; }
+  updatePlayIcon();
+}
+function playNext() { if (currentIndex < currentQueue.length - 1) playIndex(currentIndex + 1); }
+function playPrev() {
+  if (currentIndex > 0) playIndex(currentIndex - 1);
+  else if (currentIndex === 0) audio.currentTime = 0;
+}
+function updatePrevNext() {
+  document.getElementById('prevBtn').disabled = currentIndex <= 0;
+  document.getElementById('nextBtn').disabled = currentIndex < 0 || currentIndex >= currentQueue.length - 1;
+  document.getElementById('playBtn').disabled = currentQueue.length === 0;
+}
+function updatePlayIcon() {
+  const icon = document.getElementById('playIcon');
+  icon.innerHTML = isPlaying ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+}
+
+audio.addEventListener('timeupdate', () => {
+  if (!audio.duration) return;
+  const pct = (audio.currentTime / audio.duration) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('timeCur').textContent = fmtTime(audio.currentTime);
+  document.getElementById('timeDur').textContent = fmtTime(audio.duration);
+});
+audio.addEventListener('ended', () => playNext());
+audio.addEventListener('play', () => { isPlaying = true; updatePlayIcon(); });
+audio.addEventListener('pause', () => { isPlaying = false; updatePlayIcon(); });
+
+document.getElementById('progress').addEventListener('click', (e) => {
+  if (!audio.duration) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+});
+audio.volume = 0.7;
+document.getElementById('volume').addEventListener('click', (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  audio.volume = pct;
+  document.getElementById('volumeFill').style.width = (pct*100) + '%';
+});
+
+// ============================================================
+// Event wiring
+// ============================================================
+document.getElementById('signInBtn').addEventListener('click', signIn);
+document.getElementById('refreshBtn').addEventListener('click', () => { if (accessToken) onSignedIn(); });
+document.getElementById('signOutBtn').addEventListener('click', signOut);
+document.getElementById('playBtn').addEventListener('click', togglePlay);
+document.getElementById('nextBtn').addEventListener('click', playNext);
+document.getElementById('prevBtn').addEventListener('click', playPrev);
+document.getElementById('searchInput').addEventListener('input', renderTracks);
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.code === 'ArrowRight' && e.shiftKey) playNext();
+  else if (e.code === 'ArrowLeft' && e.shiftKey) playPrev();
+});
+</script>
+</body>
+</html>
