@@ -559,6 +559,14 @@ const PLAYLISTS = [
 let allTracks = [], currentPlaylistId = 'soprano', currentQueue = [], currentIndex = -1, currentBlobUrl = null, isPlaying = false;
 const audio = document.getElementById('audio');
 
+// "Remember me" — once you've entered the right password on this device,
+// localStorage holds a token so future visits skip the password gate.
+// If CONFIG.password is ever changed, the token won't match and users
+// will be asked to enter the new password.
+const REMEMBER_KEY = 'ptRemember';
+function rememberToken() {
+  return btoa(encodeURIComponent((CONFIG.password || '').toLowerCase().trim()));
+}
 
 // ============================================================
 // Helpers
@@ -673,6 +681,7 @@ async function unlock() {
     document.getElementById('pwInput').select();
     return;
   }
+  try { localStorage.setItem(REMEMBER_KEY, rememberToken()); } catch (e) {}
   try {
     showOverlay('Reading shared folder…');
     const files = await listAudioFilesInFolder(CONFIG.folderId);
@@ -697,6 +706,7 @@ async function unlock() {
   }
 }
 function lock() {
+  try { localStorage.removeItem(REMEMBER_KEY); } catch (e) {}
   allTracks = []; currentQueue = []; currentIndex = -1;
   audio.pause();
   if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
@@ -875,6 +885,15 @@ document.addEventListener('keydown', (e) => {
   else if (e.code === 'ArrowRight' && e.shiftKey) playNext();
   else if (e.code === 'ArrowLeft' && e.shiftKey) playPrev();
 });
+
+// Auto-unlock if this device has already entered the right password before.
+// Click the Lock button in the sidebar to clear this.
+try {
+  if (CONFIG.password && localStorage.getItem(REMEMBER_KEY) === rememberToken()) {
+    document.getElementById('pwInput').value = CONFIG.password;
+    unlock();
+  }
+} catch (e) { /* storage blocked — fall back to password prompt */ }
 </script>
 </body>
 </html>
