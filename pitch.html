@@ -306,13 +306,17 @@
   }
   .pitch-panel.visible { display: flex; }
 
-  .pitch-col-note {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 1px; min-width: 72px;
+  .pitch-col-notes {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .pitch-note-pair { display: flex; gap: 20px; align-items: flex-end; }
+  .pitch-note-block { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .pitch-note-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint);
   }
   .pitch-note {
-    font-size: 38px; font-weight: 700; color: var(--text); line-height: 1;
-    letter-spacing: -0.03em; min-width: 80px; text-align: center;
+    font-size: 34px; font-weight: 700; color: var(--text); line-height: 1;
+    letter-spacing: -0.03em; min-width: 64px; text-align: center;
   }
   .pitch-hz { font-size: 11px; color: var(--text-faint); min-height: 14px; text-align: center; }
   .pitch-cents { font-size: 14px; font-weight: 600; min-height: 18px; text-align: center; transition: color 0.2s; }
@@ -530,6 +534,13 @@ folderId: "17bsx3QlL_SnmA7VLyKtHzP1tfT156ZVZ",
   // Shared password. Anyone who knows this can enter the player.
   // Case-insensitive. Change it if you want to revoke access.
   password: "yachtrockchoir2026",
+
+  // Pitch tolerance in cents (100 cents = 1 semitone).
+  // pitchGreen: within this many cents counts as "In tune" (green indicator).
+  // pitchYellow: within this many cents = close but off (yellow). Beyond = red.
+  // Raise these values if singers don't need to hit perfect pitch.
+  pitchGreen: 15,
+  pitchYellow: 30,
 };
 </script>
 
@@ -590,9 +601,19 @@ folderId: "17bsx3QlL_SnmA7VLyKtHzP1tfT156ZVZ",
 
   <div id="pitchPanel" class="pitch-panel">
     <button class="pitch-close" onclick="PitchUI.toggle()" title="Close pitch feedback">✕</button>
-    <div class="pitch-col-note">
-      <div id="pitchNote" class="pitch-note">—</div>
-      <div id="pitchHz" class="pitch-hz"></div>
+    <div class="pitch-col-notes">
+      <div class="pitch-note-pair">
+        <div class="pitch-note-block">
+          <div class="pitch-note-label">Track</div>
+          <div id="pitchTrackNote" class="pitch-note">—</div>
+          <div id="pitchTrackHz" class="pitch-hz"></div>
+        </div>
+        <div class="pitch-note-block">
+          <div class="pitch-note-label">You</div>
+          <div id="pitchNote" class="pitch-note">—</div>
+          <div id="pitchHz" class="pitch-hz"></div>
+        </div>
+      </div>
       <div id="pitchCentsLbl" class="pitch-cents"></div>
       <div id="pitchStatus" class="pitch-status"></div>
     </div>
@@ -996,14 +1017,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// Pitch detection
+// Pitch detection — dual mode: track vs. mic
 // ============================================================
 const PitchUI = (() => {
-  let audioCtx = null, analyser = null, micStream = null, micSource = null;
+  // AudioContext and track source persist across start/stop because
+  // createMediaElementSource() can only be called once per element.
+  let audioCtx = null, trackAnalyser = null, trackMediaSource = null;
+  let micAnalyser = null, micStream = null, micSource = null;
   let motionAnalyzer = null, rafId = null;
-  let active = false, silenceFrames = 0;
+  let active = false, micSilence = 0;
+
   const FFT_SIZE = 2048;
-  const timeBuf = new Float32Array(FFT_SIZE);
+  const micBuf = new Float32Array(FFT_SIZE);
+  const trackBuf = new Float32Array(FFT_SIZE);
   const NOTE_NAMES = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 
   function autocorrelate(buf, sampleRate) {
@@ -1033,12 +1059,27 @@ const PitchUI = (() => {
     if (noteNum < 21 || noteNum > 108) return null;
     const octave = Math.floor(noteNum / 12) - 1;
     const name = NOTE_NAMES[noteNum % 12];
-    const cents = Math.round(1200 * Math.log2(freq / (440 * Math.pow(2, (noteNum - 69) / 12))));
-    return { name, octave, cents, hz: Math.round(freq) };
+    return { name, octave, hz: Math.round(freq) };
+  }
+
+  function initContext() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    trackAnalyser = audioCtx.createAnalyser();
+    trackAnalyser.fftSize = FFT_SIZE;
+    trackAnalyser.smoothingTimeConstant = 0.3;
+    // Wire the audio element into the Web Audio graph.
+    // Must route back to destination so playback still works.
+    trackMediaSource = audioCtx.createMediaElementSource(document.getElementById('audio'));
+    trackMediaSource.connect(trackAnalyser);
+    trackMediaSource.connect(audioCtx.destination);
   }
 
   async function start() {
     if (active) return;
+    initContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
     try {
       micStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
@@ -1048,12 +1089,12 @@ const PitchUI = (() => {
       toast('Microphone access denied. Please enable it in your browser settings.');
       return;
     }
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = FFT_SIZE;
-    analyser.smoothingTimeConstant = 0.5;
+
+    micAnalyser = audioCtx.createAnalyser();
+    micAnalyser.fftSize = FFT_SIZE;
+    micAnalyser.smoothingTimeConstant = 0.5;
     micSource = audioCtx.createMediaStreamSource(micStream);
-    micSource.connect(analyser);
+    micSource.connect(micAnalyser);
 
     const vizEl = document.getElementById('pitchViz');
     if (window.AudioMotionAnalyzer && vizEl) {
@@ -1069,7 +1110,7 @@ const PitchUI = (() => {
       } catch(e) { console.warn('audioMotion init failed:', e); }
     }
 
-    active = true; silenceFrames = 0;
+    active = true; micSilence = 0;
     document.getElementById('pitchPanel').classList.add('visible');
     document.getElementById('pitchToggle').classList.add('active');
     loop();
@@ -1081,45 +1122,68 @@ const PitchUI = (() => {
     if (motionAnalyzer) { try { motionAnalyzer.destroy(); } catch(e) {} motionAnalyzer = null; }
     if (micSource) { micSource.disconnect(); micSource = null; }
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-    if (audioCtx) { audioCtx.close(); audioCtx = null; }
+    // Leave audioCtx + trackMediaSource alive — can't recreate them.
     document.getElementById('pitchPanel').classList.remove('visible');
     document.getElementById('pitchToggle').classList.remove('active');
-    setDisplay(null, false);
+    setDisplay(null, null, null);
   }
 
   function loop() {
     if (!active) return;
     rafId = requestAnimationFrame(loop);
-    analyser.getFloatTimeDomainData(timeBuf);
-    const freq = autocorrelate(timeBuf, audioCtx.sampleRate);
-    if (freq > 0) { silenceFrames = 0; setDisplay(freqToNote(freq), true); }
-    else if (++silenceFrames > 20) setDisplay(null, true);
+
+    trackAnalyser.getFloatTimeDomainData(trackBuf);
+    const trackFreq = autocorrelate(trackBuf, audioCtx.sampleRate);
+    const trackNote = trackFreq > 0 ? freqToNote(trackFreq) : null;
+
+    micAnalyser.getFloatTimeDomainData(micBuf);
+    const micFreq = autocorrelate(micBuf, audioCtx.sampleRate);
+    if (micFreq > 0) micSilence = 0; else micSilence++;
+    const micNote = micSilence > 20 ? null : freqToNote(micFreq);
+
+    // Deviation = how far you are from the track, in cents.
+    // Wrap octave errors (singing same note in wrong octave).
+    let deviation = null;
+    if (trackFreq > 0 && micFreq > 0) {
+      let d = 1200 * Math.log2(micFreq / trackFreq);
+      while (d > 600) d -= 1200;
+      while (d < -600) d += 1200;
+      deviation = Math.max(-50, Math.min(50, d));
+    }
+
+    setDisplay(trackNote, micNote, deviation);
   }
 
-  function setDisplay(note, listening) {
-    const noteEl = document.getElementById('pitchNote');
-    const hzEl = document.getElementById('pitchHz');
-    const centsEl = document.getElementById('pitchCentsLbl');
-    const statusEl = document.getElementById('pitchStatus');
-    const dot = document.getElementById('pitchDot');
-    if (!note) {
-      noteEl.textContent = '—';
-      hzEl.textContent = listening ? 'Listening…' : '';
+  function setDisplay(trackNote, micNote, deviation) {
+    const trackNoteEl = document.getElementById('pitchTrackNote');
+    const trackHzEl  = document.getElementById('pitchTrackHz');
+    const micNoteEl  = document.getElementById('pitchNote');
+    const micHzEl    = document.getElementById('pitchHz');
+    const centsEl    = document.getElementById('pitchCentsLbl');
+    const statusEl   = document.getElementById('pitchStatus');
+    const dot        = document.getElementById('pitchDot');
+
+    trackNoteEl.textContent = trackNote ? trackNote.name + trackNote.octave : '—';
+    trackHzEl.textContent   = trackNote ? trackNote.hz + ' Hz' : (active ? 'Track silent' : '');
+    micNoteEl.textContent   = micNote   ? micNote.name + micNote.octave : '—';
+    micHzEl.textContent     = micNote   ? micNote.hz + ' Hz' : (active ? 'Listening…' : '');
+
+    if (deviation === null) {
       centsEl.textContent = ''; centsEl.style.color = '';
       statusEl.textContent = ''; statusEl.style.color = '';
       dot.style.left = '50%'; dot.style.background = 'var(--border)';
       return;
     }
-    noteEl.textContent = note.name + note.octave;
-    hzEl.textContent = note.hz + ' Hz';
-    const c = Math.max(-50, Math.min(50, note.cents));
-    centsEl.textContent = (c >= 0 ? '+' : '') + c + '¢';
-    const abs = Math.abs(c);
-    const color = abs < 10 ? '#2da98c' : abs < 25 ? '#f59e0b' : '#d65252';
+
+    const abs = Math.abs(deviation);
+    const sign = deviation >= 0 ? '+' : '';
+    centsEl.textContent = sign + Math.round(deviation) + '¢ from track';
+    const green = CONFIG.pitchGreen ?? 15, yellow = CONFIG.pitchYellow ?? 30;
+    const color = abs < green ? '#2da98c' : abs < yellow ? '#f59e0b' : '#d65252';
     centsEl.style.color = color;
-    dot.style.left = (50 + c) + '%';
+    dot.style.left = (50 + deviation) + '%';
     dot.style.background = color;
-    statusEl.textContent = abs < 10 ? 'In tune ✓' : c < 0 ? 'Flat' : 'Sharp';
+    statusEl.textContent = abs < green ? 'Matching ✓' : deviation < 0 ? 'Flat' : 'Sharp';
     statusEl.style.color = color;
   }
 
